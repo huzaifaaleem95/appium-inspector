@@ -9,10 +9,11 @@ import i18n from '../i18next.js';
 import InspectorDriver, {ELEMENT_GESTURE} from '../lib/appium/inspector-driver.js';
 import {CLIENT_FRAMEWORK_MAP} from '../lib/client-frameworks/map.js';
 import {getMobileGestureCommand, getW3CGestureActions} from '../lib/gestures/platform-gestures.js';
-import {getSetting, setSetting} from '../polyfills.js';
+import {getSetting, setSetting, stopWebDriverAgent} from '../polyfills.js';
 import {debounce, isEmpty, omit} from '../utils/common.js';
 import {downloadFile, readTextFromUploadedFiles} from '../utils/file-handling.js';
 import {parseGestureFileContents} from '../utils/gesturefile-parsing.js';
+import {getLocalIosDeviceUdidToClean} from '../utils/live-mirror.js';
 import {getSuggestedLocators} from '../utils/locator-generation/common.js';
 import {getOptimalXPath} from '../utils/locator-generation/xpath.js';
 import {log} from '../utils/logger.js';
@@ -432,9 +433,17 @@ export function quitSession({reason, manualQuit = true, detachOnly = false} = {}
   return async (dispatch, getState) => {
     const killAction = killKeepAliveLoop();
     killAction(dispatch, getState);
+    // read these before the session state is cleared
+    const wdaDeviceUdid = getLocalIosDeviceUdidToClean(getState().inspector);
     if (!detachOnly) {
       const applyAction = applyClientMethod({methodName: 'deleteSession'});
       await applyAction(dispatch, getState);
+      if (wdaDeviceUdid) {
+        // don't block quitting on this; it only clears "Automation Running" on the device
+        stopWebDriverAgent(wdaDeviceUdid)
+          .then((count) => count && log.info(`Stopped WebDriverAgent on device ${wdaDeviceUdid}`))
+          .catch((err) => log.warn(`Could not stop WebDriverAgent on device ${wdaDeviceUdid}: ${err.message}`));
+      }
     }
     dispatch({type: QUIT_SESSION_DONE});
     InspectorDriver.clearInstance(); // clear the 'cached' driver instance

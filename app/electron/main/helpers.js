@@ -4,6 +4,7 @@ import {ipcMain, nativeTheme, shell} from 'electron';
 import settings from 'electron-settings';
 
 import i18n from './i18next.js';
+import {stopWebDriverAgent} from './ios-device.js';
 
 export const isDev = process.env.NODE_ENV === 'development';
 
@@ -12,6 +13,7 @@ export function setupIPCListeners(getOpenFilePath) {
   ipcMain.handle('settings:set', async (_evt, key, value) => await settings.set(key, value));
   ipcMain.handle('settings:get', async (_evt, key) => await settings.get(key));
   ipcMain.on('electron:openLink', (_evt, link) => shell.openExternal(link));
+  ipcMain.handle('device:stopWebDriverAgent', async (_evt, udid) => await stopWebDriverAgent(udid));
   ipcMain.on('electron:setTheme', (_evt, theme) => (nativeTheme.themeSource = theme));
   ipcMain.handle('sessionfile:loadIfOpened', async () => {
     const openFilePath = getOpenFilePath();

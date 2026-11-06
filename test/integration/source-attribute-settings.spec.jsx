@@ -8,6 +8,7 @@ const {savedSettings, rendered} = vi.hoisted(() => ({
 }));
 
 vi.mock('#local-polyfills', () => ({
+  stopWebDriverAgent: async () => 0,
   settings: {
     has: (key) => savedSettings.has(key),
     get: (key) => savedSettings.get(key),

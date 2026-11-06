@@ -4,6 +4,7 @@ const openLink = (link) => window.electronIPC.openLink(link);
 const setTheme = (theme) => window.electronIPC.setTheme(theme);
 const updateLanguage = (lngCode) => window.electronIPC.updateLanguage(lngCode);
 const loadSessionFileIfOpened = () => window.electronIPC.loadSessionFileIfOpened();
+const stopWebDriverAgent = (udid) => window.electronIPC.stopWebDriverAgent(udid);
 
 class ElectronSettings {
   async has(key) {
@@ -21,4 +22,4 @@ class ElectronSettings {
 
 const settings = new ElectronSettings();
 
-export {loadSessionFileIfOpened, localesPath, openLink, setTheme, settings, updateLanguage};
+export {loadSessionFileIfOpened, localesPath, openLink, setTheme, settings, stopWebDriverAgent, updateLanguage};

@@ -11,6 +11,7 @@ const openLink = (url) => window.open(url, '');
 const setTheme = () => {}; // only relevant in Electron build
 const updateLanguage = () => {}; // only relevant in Electron build
 const loadSessionFileIfOpened = () => null; // only relevant in Electron build
+const stopWebDriverAgent = async () => 0; // needs local device access, only in Electron build
 
 class BrowserSettings {
   has(key) {
@@ -28,4 +29,4 @@ class BrowserSettings {
 
 const settings = new BrowserSettings();
 
-export {loadSessionFileIfOpened, localesPath, openLink, setTheme, settings, updateLanguage};
+export {loadSessionFileIfOpened, localesPath, openLink, setTheme, settings, stopWebDriverAgent, updateLanguage};

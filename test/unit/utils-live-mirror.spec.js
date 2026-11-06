@@ -1,7 +1,11 @@
 import {describe, expect, it} from 'vitest';
 
 import {SERVER_TYPES} from '../../app/common/renderer/constants/session-builder.js';
-import {getLiveMirrorDriver, withLiveMirrorCaps} from '../../app/common/renderer/utils/live-mirror.js';
+import {
+  getLiveMirrorDriver,
+  getLocalIosDeviceUdidToClean,
+  withLiveMirrorCaps,
+} from '../../app/common/renderer/utils/live-mirror.js';
 
 describe('utils/live-mirror.js', function () {
   describe('#getLiveMirrorDriver', function () {
@@ -40,5 +44,27 @@ describe('utils/live-mirror.js', function () {
       const winCaps = {platformName: 'Windows'};
       expect(withLiveMirrorCaps(winCaps, SERVER_TYPES.LOCAL)).toBe(winCaps);
     });
+  });
+});
+
+describe('utils/live-mirror.js #getLocalIosDeviceUdidToClean', function () {
+  const base = {
+    driver: {capabilities: {udid: '00008150-000223EA3441401C'}},
+    featureCaps: {automationName: 'xcuitest'},
+    serverDetails: {serverUrl: 'http://127.0.0.1:4723'},
+  };
+
+  it('should return the device UDID for iOS sessions on a local server', function () {
+    expect(getLocalIosDeviceUdidToClean(base)).toBe('00008150-000223EA3441401C');
+    const fromSessionCaps = {...base, driver: {capabilities: {}}, sessionCaps: {'appium:udid': 'abc'}};
+    expect(getLocalIosDeviceUdidToClean(fromSessionCaps)).toBe('abc');
+  });
+
+  it('should skip remote servers, other drivers and an external WebDriverAgent', function () {
+    expect(getLocalIosDeviceUdidToClean({...base, serverDetails: {serverUrl: 'http://10.0.0.5:4723'}})).toBeNull();
+    expect(getLocalIosDeviceUdidToClean({...base, featureCaps: {automationName: 'uiautomator2'}})).toBeNull();
+    const external = {...base, sessionCaps: {'appium:webDriverAgentUrl': 'http://192.168.1.2:8100'}};
+    expect(getLocalIosDeviceUdidToClean(external)).toBeNull();
+    expect(getLocalIosDeviceUdidToClean({...base, serverDetails: {}})).toBeNull();
   });
 });

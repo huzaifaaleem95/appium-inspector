@@ -8,4 +8,5 @@ window.electronIPC = {
   setTheme: (theme) => ipcRenderer.send('electron:setTheme', theme),
   updateLanguage: (lngCode) => ipcRenderer.send('electron:updateLanguage', lngCode),
   loadSessionFileIfOpened: async () => await ipcRenderer.invoke('sessionfile:loadIfOpened'),
+  stopWebDriverAgent: async (udid) => await ipcRenderer.invoke('device:stopWebDriverAgent', udid),
 };

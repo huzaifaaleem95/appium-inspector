@@ -51,3 +51,27 @@ export function withLiveMirrorCaps(caps, serverType) {
   }
   return {...caps, 'appium:mjpegServerPort': LIVE_MIRROR_PORTS[driverName]};
 }
+
+// After an iOS session on a real device served by a local Appium server, the XCUITest driver
+// leaves WebDriverAgent running (the device keeps showing "Automation Running"). Returns the
+// device UDID if Live Inspector should stop it, or null. Skipped when the session reused a
+// separately managed WebDriverAgent (webDriverAgentUrl). Simulators are filtered out later.
+export function getLocalIosDeviceUdidToClean({driver, sessionCaps = {}, featureCaps = {}, serverDetails = {}}) {
+  if (featureCaps.automationName !== 'xcuitest') {
+    return null;
+  }
+  const caps = driver?.capabilities ?? {};
+  const getCap = (name) => caps[name] ?? caps[`appium:${name}`] ?? sessionCaps[`appium:${name}`] ?? sessionCaps[name];
+  if (getCap('webDriverAgentUrl')) {
+    return null;
+  }
+  let host;
+  try {
+    host = new URL(serverDetails.serverUrl).hostname;
+  } catch {
+    return null;
+  }
+  const isLocalServer = ['localhost', '127.0.0.1', '[::1]', '::1', '0.0.0.0'].includes(host);
+  const udid = getCap('udid');
+  return isLocalServer && typeof udid === 'string' ? udid : null;
+}
