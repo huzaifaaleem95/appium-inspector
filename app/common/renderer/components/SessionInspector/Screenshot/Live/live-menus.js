@@ -30,7 +30,7 @@ const elementTitle = (target) => {
 };
 
 /**
- * Items for the Interact menu (right-click by default).
+ * Items for the Interact menu (left-click by default).
  * Element actions are disabled when there is no element under the cursor;
  * "Tap at this point" always works since it only needs coordinates.
  */
@@ -67,7 +67,7 @@ export function buildInteractMenuItems({t, target, refreshing}) {
 }
 
 /**
- * Items for the Inspect menu (left-click by default).
+ * Items for the Inspect menu (right-click by default).
  * Each suggested locator gets its own "copy" item, so the common case needs no dialog.
  */
 export function buildInspectMenuItems({t, target, locators, refreshing}) {

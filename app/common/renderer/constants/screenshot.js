@@ -9,14 +9,14 @@ export const SCREENSHOT_INTERACTION_MODE = {
   TAP_SWIPE: 'tap_swipe',
   TAP_ELEMENT: 'tap_element',
   GESTURE: 'gesture',
-  // Live mirror mode: hover highlights, right-click interacts, left-click inspects
+  // Live mirror mode: hover highlights, left-click interacts, right-click inspects (swappable)
   LIVE: 'live',
 };
 
 // In Live mode, refresh the page source before opening a menu if it is older than this
 export const LIVE_SOURCE_STALE_MS = 2000;
 
-// Pointer travel (in screen pixels) below which a right-button press counts as a click, not a drag
+// Pointer travel (in screen pixels) below which a press counts as a click, not a drag (swipe)
 export const LIVE_DRAG_THRESHOLD_PX = 5;
 
 // Default parameters when executing coordinate-based swipe over app screenshot

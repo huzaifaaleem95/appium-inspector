@@ -39,7 +39,7 @@ export async function setupMainWindow() {
     mainWindow = null;
   });
 
-  // The device screen handles its own right-click (Interact menu) and calls preventDefault,
+  // The device screen handles its own right-click (Inspect menu) and calls preventDefault,
   // which suppresses this event there. Elsewhere, only offer 'Inspect element' in dev builds.
   mainWindow.webContents.on('context-menu', (e, props) => {
     if (!isDev) {

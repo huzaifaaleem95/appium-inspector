@@ -10,9 +10,9 @@ One window with the device screen mirrored live, plus the existing source tree a
 | Input on the device screen | Result |
 |---|---|
 | Hover | Highlights the element under the cursor (one rectangle, not all of them) |
-| **Right-click** | Opens the **Interact** menu for the element under the cursor: Tap, Double tap, Long press, Swipe/Scroll (4 directions), Drag to…, Pinch in/out, Type text…, Clear, Tap at this exact point |
-| **Right-button drag** | Swipes directly from the start point to the end point, with no menu |
-| **Left-click** | Opens the **Inspect** menu: *Show locators & attributes…* (dialog), Copy best locator, Copy XPath, Reveal in source tree |
+| **Left-click** | Opens the **Interact** menu for the element under the cursor: Tap, Double tap, Long press, Swipe/Scroll (4 directions), Drag to…, Pinch in/out, Type text…, Clear, Tap at this exact point |
+| **Left-button drag** | Swipes directly from the start point to the end point, with no menu |
+| **Right-click** | Opens the **Inspect** menu: *Show locators & attributes…* (dialog), Copy best locator, Copy XPath, Reveal in source tree |
 | Inspect dialog | Reuses the existing Selected Element pane, where clicking a cell already copies it |
 | Phase 2 | Every action above is recorded, then exported as a runnable Python (pytest) script |
 

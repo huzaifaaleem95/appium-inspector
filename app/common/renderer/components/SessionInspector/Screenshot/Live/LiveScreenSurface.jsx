@@ -30,8 +30,9 @@ const getPhysicalButton = (e) => {
 /**
  * Live mode device screen: a single surface that both controls the device and inspects elements.
  * - hover highlights the element under the cursor
- * - the "interact" button (right by default) opens the Interact menu; dragging with it swipes
- * - the "inspect" button (left by default) opens the Inspect menu (locators, copy, reveal)
+ * - the "interact" button (left by default) opens the Interact menu; dragging with it swipes
+ * - the "inspect" button (right by default) opens the Inspect menu (locators, copy, reveal)
+ * - while a "Drag to…" is pending, a click with either button picks the drop point
  */
 const LiveScreenSurface = (props) => {
   const {
@@ -66,7 +67,7 @@ const LiveScreenSurface = (props) => {
   const [typedText, setTypedText] = useState('');
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  const interactButton = swapMouseButtons ? 'primary' : 'secondary';
+  const interactButton = swapMouseButtons ? 'secondary' : 'primary';
 
   // Screen pixel position (relative to the surface) -> device coordinates
   const toDevicePoint = useCallback(
@@ -142,7 +143,8 @@ const LiveScreenSurface = (props) => {
   };
 
   // Menus are opened on mouseup rather than on 'contextmenu', because macOS fires
-  // 'contextmenu' on mousedown, which would make right-button drag-to-swipe impossible.
+  // 'contextmenu' on mousedown, which would make drag-to-swipe impossible with the right button
+  // (when the buttons are swapped).
   const onMouseUp = async (e) => {
     const press = pressRef.current;
     pressRef.current = null;
@@ -154,17 +156,8 @@ const LiveScreenSurface = (props) => {
     const moved =
       Math.hypot(point.screenX - press.point.screenX, point.screenY - press.point.screenY) >= LIVE_DRAG_THRESHOLD_PX;
 
-    if (button === interactButton) {
-      if (moved) {
-        await handleSwipeOnScreenshot(press.point, point, applyClientMethod);
-      } else {
-        await openMenu(MENU.INTERACT, point);
-      }
-      return;
-    }
-
-    // inspect button
-    if (pendingDrag) {
+    // A pending "Drag to…" takes the next click (with either button) as the drop point
+    if (pendingDrag && !moved) {
       const {target} = pendingDrag;
       setPendingDrag(null);
       await performElementGesture({
@@ -175,6 +168,17 @@ const LiveScreenSurface = (props) => {
       });
       return;
     }
+
+    if (button === interactButton) {
+      if (moved) {
+        await handleSwipeOnScreenshot(press.point, point, applyClientMethod);
+      } else {
+        await openMenu(MENU.INTERACT, point);
+      }
+      return;
+    }
+
+    // inspect button
     if (!moved) {
       await openMenu(MENU.INSPECT, point);
     }
