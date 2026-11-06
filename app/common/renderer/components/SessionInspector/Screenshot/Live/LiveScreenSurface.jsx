@@ -2,7 +2,7 @@ import {Dropdown, Input, Modal} from 'antd';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 
-import {LIVE_DRAG_THRESHOLD_PX} from '../../../../constants/screenshot.js';
+import {LIVE_DRAG_THRESHOLD_PX, LIVE_LONG_PRESS_MS} from '../../../../constants/screenshot.js';
 import {INSPECTOR_TABS, NATIVE_APP} from '../../../../constants/session-inspector.js';
 import {ELEMENT_GESTURES} from '../../../../lib/gestures/platform-gestures.js';
 import {findElementAtPoint, flattenElementsWithBounds} from '../../../../utils/hit-test.js';
@@ -30,7 +30,10 @@ const getPhysicalButton = (e) => {
 /**
  * Live mode device screen: a single surface that both controls the device and inspects elements.
  * - hover highlights the element under the cursor
- * - the "interact" button (left by default) opens the Interact menu; dragging with it swipes
+ * - the "interact" button (left by default):
+ *   - click: taps the element under the cursor (or the exact point if there is no element)
+ *   - hold still for LIVE_LONG_PRESS_MS: opens the Interact menu (all other gestures)
+ *   - drag: swipes from the press point to the release point
  * - the "inspect" button (right by default) opens the Inspect menu (locators, copy, reveal)
  * - while a "Drag to…" is pending, a click with either button picks the drop point
  */
@@ -59,8 +62,11 @@ const LiveScreenSurface = (props) => {
   const {t} = useTranslation();
 
   const surfaceRef = useRef(null);
+  // The current mouse press: {button, point, timer, moved, menuOpened}
   const pressRef = useRef(null);
   const [hover, setHover] = useState(null);
+  // Where the interact button is being held, to show the long-press progress ring
+  const [holdPoint, setHoldPoint] = useState(null);
   const [menu, setMenu] = useState(null);
   const [pendingDrag, setPendingDrag] = useState(null);
   const [typeTarget, setTypeTarget] = useState(null);
@@ -90,6 +96,18 @@ const LiveScreenSurface = (props) => {
 
   const closeMenu = () => setMenu(null);
 
+  const distance = (a, b) => Math.hypot(a.screenX - b.screenX, a.screenY - b.screenY);
+
+  // Ends the current press: stops the long-press timer and hides the progress ring
+  const endPress = () => {
+    clearTimeout(pressRef.current?.timer);
+    pressRef.current = null;
+    setHoldPoint(null);
+  };
+
+  // Don't leave a long-press timer running after the surface goes away
+  useEffect(() => () => clearTimeout(pressRef.current?.timer), []);
+
   // Escape cancels a pending "Drag to…" and closes menus
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -117,6 +135,13 @@ const LiveScreenSurface = (props) => {
       setHover(null);
       return;
     }
+    // Moving while pressed turns the press into a drag (swipe), so it can no longer be a long press
+    const press = pressRef.current;
+    if (press && !press.moved && distance(point, press.point) >= LIVE_DRAG_THRESHOLD_PX) {
+      press.moved = true;
+      clearTimeout(press.timer);
+      setHoldPoint(null);
+    }
     const target = findElementAtPoint(sourceJSON, point.x, point.y);
     setHover((prev) => {
       if (prev?.target?.path === target?.path && prev?.point?.x === point.x && prev?.point?.y === point.y) {
@@ -128,7 +153,7 @@ const LiveScreenSurface = (props) => {
 
   const onMouseLeave = () => {
     setHover(null);
-    pressRef.current = null;
+    endPress();
   };
 
   const onMouseDown = (e) => {
@@ -139,7 +164,31 @@ const LiveScreenSurface = (props) => {
     }
     // stop text selection / native drag of the image
     e.preventDefault();
-    pressRef.current = {button, point};
+    endPress();
+    const press = {button, point, moved: false, menuOpened: false};
+    // Holding the interact button still opens the Interact menu, without waiting for release
+    if (button === interactButton && !pendingDrag) {
+      setHoldPoint(point);
+      press.timer = setTimeout(() => {
+        press.menuOpened = true;
+        setHoldPoint(null);
+        openMenu(MENU.INTERACT, point);
+      }, LIVE_LONG_PRESS_MS);
+    }
+    pressRef.current = press;
+  };
+
+  // A click with the interact button: tap the element under the cursor, like a finger tap.
+  // Uses the element (found by its suggested locators) so the recorder can replay it by locator;
+  // falls back to tapping the exact coordinates when there is no element or it can't be found.
+  const tapAt = async (point) => {
+    const target = findElementAtPoint(sourceJSON, point.x, point.y);
+    const elementId = target ? await selectElementNow(target.path) : null;
+    if (elementId) {
+      await applyClientMethod({methodName: 'elementClick', elementId});
+    } else {
+      await handleTapOnScreenshot(point, applyClientMethod);
+    }
   };
 
   // Menus are opened on mouseup rather than on 'contextmenu', because macOS fires
@@ -147,14 +196,14 @@ const LiveScreenSurface = (props) => {
   // (when the buttons are swapped).
   const onMouseUp = async (e) => {
     const press = pressRef.current;
-    pressRef.current = null;
+    endPress();
     const button = getPhysicalButton(e);
     const point = toDevicePoint(e);
-    if (!press || !point || button !== press.button || !isFromSurface(e)) {
+    // a long press already opened the Interact menu: releasing the button does nothing more
+    if (!press || press.menuOpened || !point || button !== press.button || !isFromSurface(e)) {
       return;
     }
-    const moved =
-      Math.hypot(point.screenX - press.point.screenX, point.screenY - press.point.screenY) >= LIVE_DRAG_THRESHOLD_PX;
+    const moved = press.moved || distance(point, press.point) >= LIVE_DRAG_THRESHOLD_PX;
 
     // A pending "Drag to…" takes the next click (with either button) as the drop point
     if (pendingDrag && !moved) {
@@ -173,7 +222,7 @@ const LiveScreenSurface = (props) => {
       if (moved) {
         await handleSwipeOnScreenshot(press.point, point, applyClientMethod);
       } else {
-        await openMenu(MENU.INTERACT, point);
+        await tapAt(point);
       }
       return;
     }
@@ -336,6 +385,12 @@ const LiveScreenSurface = (props) => {
           </div>
         )}
         {pendingDrag && <div className={styles.banner}>{t('liveDragHint')}</div>}
+        {holdPoint && (
+          <div
+            className={styles.holdRing}
+            style={{left: holdPoint.screenX, top: holdPoint.screenY, animationDuration: `${LIVE_LONG_PRESS_MS}ms`}}
+          />
+        )}
         {menu && (
           <Dropdown
             open

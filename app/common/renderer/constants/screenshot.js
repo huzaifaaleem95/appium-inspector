@@ -9,12 +9,16 @@ export const SCREENSHOT_INTERACTION_MODE = {
   TAP_SWIPE: 'tap_swipe',
   TAP_ELEMENT: 'tap_element',
   GESTURE: 'gesture',
-  // Live mirror mode: hover highlights, left-click interacts, right-click inspects (swappable)
+  // Live mirror mode: hover highlights; left-click taps, left-hold opens the Interact menu,
+  // left-drag swipes; right-click inspects (buttons are swappable)
   LIVE: 'live',
 };
 
 // In Live mode, refresh the page source before opening a menu if it is older than this
 export const LIVE_SOURCE_STALE_MS = 2000;
+
+// How long the interact button must be held still to open the Interact menu (a click taps instead)
+export const LIVE_LONG_PRESS_MS = 750;
 
 // Pointer travel (in screen pixels) below which a press counts as a click, not a drag (swipe)
 export const LIVE_DRAG_THRESHOLD_PX = 5;

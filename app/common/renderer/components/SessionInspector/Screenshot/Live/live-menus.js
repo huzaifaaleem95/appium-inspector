@@ -30,7 +30,7 @@ const elementTitle = (target) => {
 };
 
 /**
- * Items for the Interact menu (left-click by default).
+ * Items for the Interact menu (opened by holding the left button by default).
  * Element actions are disabled when there is no element under the cursor;
  * "Tap at this point" always works since it only needs coordinates.
  */

@@ -78,3 +78,30 @@
   max-height: 70vh;
   overflow-y: auto;
 }
+
+/* Long-press progress: a ring that fills while the interact button is held */
+.holdRing {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: conic-gradient(#1677ff var(--hold-progress, 0%), rgba(22, 119, 255, 0.15) 0);
+  mask: radial-gradient(circle, transparent 11px, #000 12px);
+  animation-name: holdFill;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@property --hold-progress {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+
+@keyframes holdFill {
+  to {
+    --hold-progress: 100%;
+  }
+}
