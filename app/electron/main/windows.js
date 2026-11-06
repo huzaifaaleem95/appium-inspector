@@ -63,10 +63,39 @@ export async function setupMainWindow() {
     callback({requestHeaders: details.requestHeaders});
   });
 
+  if (isDev) {
+    allowCrossOriginServerRequestsInDev(mainWindow.webContents.session);
+  }
+
   // Not included in `setupIPCListeners` to avoid circular dependency
   ipcMain.on('electron:updateLanguage', async (_evt, lngCode) => {
     await i18n.changeLanguage(lngCode);
     rebuildMenus(mainWindow);
+  });
+}
+
+// In dev mode the renderer is served from the Vite dev server (http://localhost:<port>), so every
+// call to an Appium server is cross-origin, and Chromium blocks it unless the server was started
+// with '--allow-cors'. Production builds load from file:// and are not affected. To make dev mode
+// behave like production, answer CORS for those requests here (preflights become 204 responses).
+// Requests to the dev server itself are left untouched.
+function allowCrossOriginServerRequestsInDev(session) {
+  const devOrigin = new URL(process.env.ELECTRON_RENDERER_URL).origin;
+  const CORS_HEADER = /^access-control-/i;
+
+  session.webRequest.onHeadersReceived((details, callback) => {
+    if (details.url.startsWith(devOrigin) || !['xhr', 'fetch'].includes(details.resourceType)) {
+      return callback({});
+    }
+    const responseHeaders = Object.fromEntries(
+      Object.entries(details.responseHeaders || {}).filter(([name]) => !CORS_HEADER.test(name)),
+    );
+    responseHeaders['Access-Control-Allow-Origin'] = [devOrigin];
+    responseHeaders['Access-Control-Allow-Methods'] = ['GET, POST, PUT, DELETE, OPTIONS'];
+    // '*' does not cover Authorization, which cloud vendors' servers need
+    responseHeaders['Access-Control-Allow-Headers'] = ['Authorization, *'];
+    const isPreflight = details.method === 'OPTIONS';
+    callback({responseHeaders, ...(isPreflight && {statusLine: 'HTTP/1.1 204 No Content'})});
   });
 }
 
