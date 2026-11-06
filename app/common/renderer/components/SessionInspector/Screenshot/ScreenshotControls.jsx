@@ -1,7 +1,11 @@
 import {
+  IconArrowsExchange,
   IconCrosshair,
+  IconDeviceMobile,
   IconDownload,
   IconEyePlus,
+  IconLayoutSidebarRightCollapse,
+  IconLayoutSidebarRightExpand,
   IconMovie,
   IconObjectScan,
   IconPhoto,
@@ -17,7 +21,7 @@ import {downloadFile} from '../../../utils/file-handling.js';
 
 import styles from './Screenshot.module.css';
 
-const {SELECT, TAP_SWIPE, TAP_ELEMENT} = SCREENSHOT_INTERACTION_MODE;
+const {SELECT, TAP_SWIPE, TAP_ELEMENT, LIVE} = SCREENSHOT_INTERACTION_MODE;
 
 const downloadScreenshot = (screenshot) => {
   const href = `data:image/png;base64,${screenshot}`;
@@ -94,11 +98,13 @@ const ScreenshotInteractionModeControls = ({
   clearCoordAction,
   isGestureEditorVisible,
   platformName,
+  swapMouseButtons,
 }) => {
   // Disable the tap/swipe interaction mode on unsupported platforms
   const areW3CActionsUnsupported = PLATFORMS_WITHOUT_W3C_ACTIONS.includes(platformName);
 
   const {t} = useTranslation();
+  const liveLabel = swapMouseButtons ? t('liveModeSwapped') : t('liveMode');
   const selectElemLabel = t('Select Elements');
   const tapElemLabel = t('Tap By Element');
   const tapCoordsLabel = areW3CActionsUnsupported ? t('w3cActionsUnsupported') : t('Tap/Swipe By Coordinates');
@@ -110,6 +116,15 @@ const ScreenshotInteractionModeControls = ({
 
   return (
     <Space.Compact>
+      <Tooltip title={liveLabel}>
+        <Button
+          aria-label={liveLabel}
+          icon={<IconDeviceMobile size={18} />}
+          onClick={() => screenshotInteractionChange(LIVE)}
+          type={screenshotInteractionMode === LIVE ? BUTTON.PRIMARY : BUTTON.DEFAULT}
+          disabled={isGestureEditorVisible}
+        />
+      </Tooltip>
       <Tooltip title={selectElemLabel}>
         <Button
           aria-label={selectElemLabel}
@@ -138,6 +153,40 @@ const ScreenshotInteractionModeControls = ({
         />
       </Tooltip>
     </Space.Compact>
+  );
+};
+
+/**
+ * Toggle for swapping which mouse button interacts and which inspects in Live mode.
+ */
+const SwapMouseButtonsButton = ({swapMouseButtons, setSwapMouseButtons}) => {
+  const {t} = useTranslation();
+  const label = t('liveSwapButtons');
+
+  return (
+    <Tooltip title={label}>
+      <Button
+        aria-label={label}
+        icon={<IconArrowsExchange size={18} />}
+        onClick={() => setSwapMouseButtons(!swapMouseButtons)}
+        type={swapMouseButtons ? BUTTON.PRIMARY : BUTTON.DEFAULT}
+      />
+    </Tooltip>
+  );
+};
+
+/**
+ * Toggle for hiding the tabs panel, so the device screen fills the window.
+ */
+const ToggleSidePanelButton = ({isSidePanelHidden, toggleSidePanel}) => {
+  const {t} = useTranslation();
+  const label = isSidePanelHidden ? t('liveShowPanel') : t('liveDeviceOnly');
+  const Icon = isSidePanelHidden ? IconLayoutSidebarRightExpand : IconLayoutSidebarRightCollapse;
+
+  return (
+    <Tooltip title={label}>
+      <Button aria-label={label} icon={<Icon size={18} />} onClick={toggleSidePanel} />
+    </Tooltip>
   );
 };
 
@@ -179,7 +228,12 @@ const ScreenshotControls = (props) => {
     clearCoordAction,
     applyClientMethod,
     featureCaps,
+    swapMouseButtons,
+    setSwapMouseButtons,
+    isSidePanelHidden,
+    toggleSidePanel,
   } = props;
+  const isLiveMode = screenshotInteractionMode === LIVE;
 
   return (
     <div className={styles.screenshotControls}>
@@ -192,23 +246,32 @@ const ScreenshotControls = (props) => {
             applyClientMethod={applyClientMethod}
           />
         )}
-        <ToggleElementHandlesButton
-          showCentroids={showCentroids}
-          toggleShowCentroids={toggleShowCentroids}
-          isGestureEditorVisible={isGestureEditorVisible}
-        />
+        {!isLiveMode && (
+          <ToggleElementHandlesButton
+            showCentroids={showCentroids}
+            toggleShowCentroids={toggleShowCentroids}
+            isGestureEditorVisible={isGestureEditorVisible}
+          />
+        )}
         <ScreenshotInteractionModeControls
           screenshotInteractionMode={screenshotInteractionMode}
           selectScreenshotInteractionMode={selectScreenshotInteractionMode}
           clearCoordAction={clearCoordAction}
           isGestureEditorVisible={isGestureEditorVisible}
           platformName={featureCaps.platformName}
+          swapMouseButtons={swapMouseButtons}
         />
+        {isLiveMode && (
+          <SwapMouseButtonsButton swapMouseButtons={swapMouseButtons} setSwapMouseButtons={setSwapMouseButtons} />
+        )}
         <DownloadScreenshotButton
           screenshot={screenshot}
           showScreenshot={showScreenshot}
           isUsingMjpegMode={isUsingMjpegMode}
         />
+        {toggleSidePanel && (
+          <ToggleSidePanelButton isSidePanelHidden={isSidePanelHidden} toggleSidePanel={toggleSidePanel} />
+        )}
       </Space>
     </div>
   );

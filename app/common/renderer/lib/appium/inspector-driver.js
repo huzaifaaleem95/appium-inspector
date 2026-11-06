@@ -13,6 +13,9 @@ import {parseHtmlSource, setHtmlElementAttributes} from '../../utils/webview.js'
 
 const {TAP, SWIPE, GESTURE} = SCREENSHOT_INTERACTION_MODE;
 
+// Pseudo-method: run a `mobile:` gesture command on a cached element (see Live mode Interact menu)
+export const ELEMENT_GESTURE = 'elementGesture';
+
 // Selector for the Android webview - includes the correct top and bottom boundaries
 const ANDROID_WEBVIEW_SELECTOR = 'android.webkit.WebView';
 const IOS_SAFARI_BUNDLE_ID = 'com.apple.mobilesafari';
@@ -140,11 +143,18 @@ export default class InspectorDriver {
         cachedEl.variableName = `el${this.elVarCount}`;
       }
 
-      if (typeof cachedEl.el[methodName] !== 'function') {
-        throw new WebdriverUnknownError(SESSION_EXPIRED);
+      if (methodName === ELEMENT_GESTURE) {
+        // Run a driver-specific `mobile:` gesture on this element. The element ID is merged in here
+        // (rather than by the caller) so the recorder can emit it as the element variable's ID.
+        const [script, opts = {}] = args;
+        res = await this.driver.executeScript(script, [{...opts, elementId}]);
+      } else {
+        if (typeof cachedEl.el[methodName] !== 'function') {
+          throw new WebdriverUnknownError(SESSION_EXPIRED);
+        }
+        // and then execute whatever method we requested on the actual element
+        res = await cachedEl.el[methodName].apply(cachedEl.el, args);
       }
-      // and then execute whatever method we requested on the actual element
-      res = await cachedEl.el[methodName].apply(cachedEl.el, args);
     } else {
       // Specially handle the tap and swipe method
       if ([TAP, SWIPE, GESTURE].includes(methodName)) {

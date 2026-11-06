@@ -44,12 +44,15 @@ const Inspector = () => {
     isRecording,
     startRecording,
     pauseRecording,
+    loadLiveModePreferences,
   } = props;
 
   const navigate = useNavigate();
 
   const [screenshotPanelWidth, setScreenshotPanelWidth] = useState(WINDOW_DIMENSIONS.INITIAL_SCREENSHOT_PANEL_WIDTH_PX);
   const screenshotPanelResizedManually = useRef(false);
+  // "Device only" view: hide the tabs panel so the live screen gets the whole window
+  const [isSidePanelHidden, setIsSidePanelHidden] = useState(false);
 
   // Triggered when the width of the scaled image or Inspector window changes.
   const setPanelWidthAutomatically = (suggestedWidth) => {
@@ -86,9 +89,17 @@ const Inspector = () => {
     applyClientMethod({methodName: 'getPageSource'});
     storeSessionSettings();
     getSavedClientFramework();
+    loadLiveModePreferences();
     runKeepAliveLoop();
     setSessionTime(Date.now());
-  }, [applyClientMethod, getSavedClientFramework, runKeepAliveLoop, setSessionTime, storeSessionSettings]);
+  }, [
+    applyClientMethod,
+    getSavedClientFramework,
+    loadLiveModePreferences,
+    runKeepAliveLoop,
+    setSessionTime,
+    storeSessionSettings,
+  ]);
 
   return (
     <InspectorShortcuts
@@ -102,19 +113,24 @@ const Inspector = () => {
       <Splitter className={styles.inspectorSplitter} onResize={setPanelWidthManually}>
         <Splitter.Panel
           min={WINDOW_DIMENSIONS.MIN_IMG_WIDTH_PX}
-          max={MAX_SCREENSHOT_WIDTH_PERCENT}
-          size={screenshotPanelWidth}
+          max={isSidePanelHidden ? '100%' : MAX_SCREENSHOT_WIDTH_PERCENT}
+          size={isSidePanelHidden ? '100%' : screenshotPanelWidth}
         >
           <Screenshot
             {...props}
             showScreenshot={showScreenshot}
             screenshotPanelWidth={screenshotPanelWidth}
             suggestScreenshotPanelWidth={setPanelWidthAutomatically}
+            isSidePanelHidden={isSidePanelHidden}
+            toggleSidePanel={() => setIsSidePanelHidden((hidden) => !hidden)}
+            onRevealInSource={() => setIsSidePanelHidden(false)}
           />
         </Splitter.Panel>
-        <Splitter.Panel>
-          <SessionInspectorTabs {...props} showScreenshot={showScreenshot} />
-        </Splitter.Panel>
+        {!isSidePanelHidden && (
+          <Splitter.Panel>
+            <SessionInspectorTabs {...props} showScreenshot={showScreenshot} />
+          </Splitter.Panel>
+        )}
       </Splitter>
       <SessionExpiryModal
         showKeepAlivePrompt={showKeepAlivePrompt}

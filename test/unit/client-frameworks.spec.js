@@ -413,3 +413,24 @@ describe('client-frameworks', function () {
     });
   });
 });
+
+describe('client-frameworks: elementGesture (Live mode)', function () {
+  it('should emit the gesture with the found element variable id in Python', function () {
+    const framework = new PythonFramework(SERVER_URL, SERVER_URL_PARTS, CAPS);
+    framework.actions = [
+      {action: 'findAndAssign', params: ['accessibility id', 'Login', 'el1', false]},
+      {action: 'elementGesture', params: ['el1', null, 'mobile: swipeGesture', {direction: 'up', percent: 0.75}]},
+    ];
+    const code = framework.getCodeString(false);
+    expect(code).toContain('el1 = driver.find_element(by=AppiumBy.ACCESSIBILITY_ID, value="Login")');
+    expect(code).toContain(
+      'driver.execute_script("mobile: swipeGesture", {"direction": "up", "percent": 0.75, "elementId": el1.id})',
+    );
+  });
+
+  it('should fall back to an "unsupported" comment in other frameworks', function () {
+    const framework = new RubyFramework(SERVER_URL, SERVER_URL_PARTS, CAPS);
+    framework.actions = [{action: 'elementGesture', params: ['el1', null, 'mobile: doubleTap', {}]}];
+    expect(framework.getCodeString(false)).toContain("'elementGesture' is not currently supported");
+  });
+});

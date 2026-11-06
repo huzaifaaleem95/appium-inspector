@@ -24,6 +24,7 @@ import {getSetting, loadSessionFileIfOpened, setSetting} from '../polyfills.js';
 import {fetchSessionInformation, formatSeleniumGridSessions} from '../utils/attaching-to-session.js';
 import {isEmpty, omit} from '../utils/common.js';
 import {downloadFile, readTextFromUploadedFiles} from '../utils/file-handling.js';
+import {withLiveMirrorCaps} from '../utils/live-mirror.js';
 import {log} from '../utils/logger.js';
 import {notification} from '../utils/notification.js';
 import {addVendorPrefixes, getRandomId} from '../utils/other.js';
@@ -323,6 +324,11 @@ export function newSession(originalCaps, attachSessId = null) {
     // default
     if (sessionCaps[CAPS_CONNECT_HARDWARE_KEYBOARD] === undefined) {
       sessionCaps[CAPS_CONNECT_HARDWARE_KEYBOARD] = true;
+    }
+
+    // Stream the device screen live (MJPEG) unless the user configured it differently
+    if (!attachSessId) {
+      sessionCaps = withLiveMirrorCaps(sessionCaps, session.serverType);
     }
 
     let driver;
@@ -1048,7 +1054,9 @@ async function retrieveVendorProperties({server, serverType, sessionCaps}) {
   log.info(`Using ${VendorClass.name}`);
 
   try {
-    const vendor = new VendorClass(server, sessionCaps);
+    // Vendors write resolved values (e.g. host) back onto their server slice, so give them a copy:
+    // mutating the Redux state here throws in development builds and is a latent bug in production
+    const vendor = new VendorClass(structuredClone(server), sessionCaps);
     return await vendor.apply();
   } catch (e) {
     showError(e);

@@ -2,7 +2,6 @@ import {app, dialog, Menu, shell} from 'electron';
 
 import webdriverPackageJson from '../../../node_modules/webdriver/package.json';
 import {isDev, t} from './helpers.js';
-import {checkForUpdates} from './updater.js';
 import {launchNewSessionWindow} from './windows.js';
 
 const INSPECTOR_DOCS_URL = 'https://appium.github.io/appium-inspector';
@@ -29,7 +28,7 @@ function showAppInfoPopup() {
   dialog.showMessageBox({
     title: t('appiumInspector'),
     message:
-      `Appium Inspector ${app.getVersion()}\n\n` +
+      `Live Inspector ${app.getVersion()} (based on Appium Inspector)\n\n` +
       `WebdriverIO ${webdriverPackageJson.version}\n` +
       `Electron ${process.versions.electron}\n` +
       `Node.js ${process.versions.node}`,
@@ -43,19 +42,11 @@ function optionAbout() {
   };
 }
 
-function optionCheckForUpdates() {
-  return {
-    label: t('Check for Updates…'),
-    click: () => checkForUpdates(),
-  };
-}
-
 function dropdownApp() {
   return {
     label: t('appiumInspector'),
     submenu: [
       optionAbout(),
-      optionCheckForUpdates(),
       separator,
       {label: t('Hide Appium Inspector'), role: 'hide'},
       {label: t('Hide Others'), role: 'hideOthers'},
@@ -73,7 +64,7 @@ function dropdownFile(isMac) {
   ];
 
   if (!isMac) {
-    submenu.push(...[separator, optionAbout(), optionCheckForUpdates()]);
+    submenu.push(...[separator, optionAbout()]);
   }
 
   return {

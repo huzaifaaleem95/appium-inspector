@@ -39,6 +39,7 @@ import {
   SET_APP_ID,
   SET_APP_MODE,
   SET_AUTO_SESSION_RESTART,
+  SET_SWAP_MOUSE_BUTTONS,
   SET_AWAITING_MJPEG_STREAM,
   SET_CLIENT_FRAMEWORK,
   SET_CONTEXT,
@@ -92,7 +93,9 @@ const INITIAL_STATE = {
   isSourceRefreshOn: true,
   showBoilerplate: false,
   recordedActions: [],
-  clientFramework: CLIENT_FRAMEWORKS.JAVA_JUNIT4,
+  clientFramework: CLIENT_FRAMEWORKS.PYTHON,
+  sourceFetchedAt: 0,
+  swapMouseButtons: false,
   serverDetails: {},
   sessionCaps: {},
   featureCaps: {},
@@ -104,7 +107,7 @@ const INITIAL_STATE = {
   locatorSearchValue: '',
   isSearchingForElements: false,
   assignedVarCache: {},
-  screenshotInteractionMode: SCREENSHOT_INTERACTION_MODE.SELECT,
+  screenshotInteractionMode: SCREENSHOT_INTERACTION_MODE.LIVE,
   searchedForElementBounds: null,
   selectedInspectorTab: INSPECTOR_TABS.SOURCE,
   appMode: APP_MODE.NATIVE,
@@ -124,6 +127,7 @@ export default function inspector(state = INITIAL_STATE, action) {
     case SET_SOURCE_AND_SCREENSHOT:
       return {
         ...state,
+        sourceFetchedAt: Date.now(),
         contexts: action.contexts,
         contextsError: action.contextsError,
         currentContext: action.currentContext || NATIVE_APP,
@@ -594,6 +598,9 @@ export default function inspector(state = INITIAL_STATE, action) {
 
     case TOGGLE_SHOW_ATTRIBUTES:
       return {...state, showSourceAttrs: !state.showSourceAttrs};
+
+    case SET_SWAP_MOUSE_BUTTONS:
+      return {...state, swapMouseButtons: action.swapMouseButtons};
 
     case SET_REFRESHING_STATE:
       return {...state, isSourceRefreshOn: action.refreshStates.source};

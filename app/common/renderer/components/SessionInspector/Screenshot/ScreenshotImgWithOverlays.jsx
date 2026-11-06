@@ -1,56 +1,18 @@
 import {Spin} from 'antd';
 import {useState} from 'react';
 
-import {POINTER_TYPES} from '../../../constants/gestures.js';
-import {DEFAULT_SWIPE, DEFAULT_TAP, SCREENSHOT_INTERACTION_MODE} from '../../../constants/screenshot.js';
+import {SCREENSHOT_INTERACTION_MODE} from '../../../constants/screenshot.js';
 import {INSPECTOR_TABS} from '../../../constants/session-inspector.js';
+import LiveScreenSurface from './Live/LiveScreenSurface.jsx';
 import CoordinatesContainer from './Overlays/CoordinatesContainer.jsx';
 import ElementOverlays from './Overlays/ElementOverlays.jsx';
 import GestureTrail from './Overlays/GestureTrail.jsx';
 import TapSwipeTrail from './Overlays/TapSwipeTrail.jsx';
+import {handleSwipeOnScreenshot, handleTapOnScreenshot} from './pointer-actions.js';
 
 import styles from './Screenshot.module.css';
 
-const {POINTER_UP, POINTER_DOWN, PAUSE, POINTER_MOVE} = POINTER_TYPES;
-const {TAP, SELECT, SWIPE, TAP_SWIPE, TAP_ELEMENT} = SCREENSHOT_INTERACTION_MODE;
-
-const handleTapOnScreenshot = async (tapPoint, applyClientMethod) => {
-  const {POINTER_NAME, DURATION_1, DURATION_2, BUTTON} = DEFAULT_TAP;
-  await applyClientMethod({
-    methodName: TAP,
-    args: [
-      {
-        [POINTER_NAME]: [
-          {type: POINTER_MOVE, duration: DURATION_1, x: tapPoint.x, y: tapPoint.y},
-          {type: POINTER_DOWN, button: BUTTON},
-          {type: PAUSE, duration: DURATION_2},
-          {type: POINTER_UP, button: BUTTON},
-        ],
-      },
-    ],
-  });
-};
-
-const handleSwipeOnScreenshot = async (swipeStartPoint, swipeEndPoint, applyClientMethod) => {
-  const {POINTER_NAME, DURATION_1, DURATION_2, BUTTON, ORIGIN} = DEFAULT_SWIPE;
-  await applyClientMethod({
-    methodName: SWIPE,
-    args: {
-      [POINTER_NAME]: [
-        {type: POINTER_MOVE, duration: DURATION_1, x: swipeStartPoint.x, y: swipeStartPoint.y},
-        {type: POINTER_DOWN, button: BUTTON},
-        {
-          type: POINTER_MOVE,
-          duration: DURATION_2,
-          origin: ORIGIN,
-          x: swipeEndPoint.x,
-          y: swipeEndPoint.y,
-        },
-        {type: POINTER_UP, button: BUTTON},
-      ],
-    },
-  });
-};
+const {SELECT, TAP_SWIPE, TAP_ELEMENT, LIVE} = SCREENSHOT_INTERACTION_MODE;
 
 /**
  * Shows the app screenshot along with various overlay elements,
@@ -138,6 +100,17 @@ const ScreenshotImgWithOverlays = (props) => {
   }
 
   const screenSrc = isUsingMjpegMode ? serverDetails.mjpegScreenshotUrl : `data:image/png;base64,${screenshot}`;
+
+  // Live mode: one surface for both controlling the device and inspecting elements
+  if (screenshotInteractionMode === LIVE) {
+    return (
+      <Spin size="large" spinning={!!methodCallInProgress && !isUsingMjpegMode}>
+        <div className={styles.innerScreenshotContainer}>
+          <LiveScreenSurface {...props} screenSrc={screenSrc} />
+        </div>
+      </Spin>
+    );
+  }
 
   // Show loading indicator if a method call is in progress, unless using MJPEG mode.
   return (

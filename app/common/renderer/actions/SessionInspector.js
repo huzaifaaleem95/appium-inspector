@@ -1,12 +1,14 @@
 import sanitize from 'sanitize-filename';
 
-import {SAVED_CLIENT_FRAMEWORK, SET_SAVED_GESTURES} from '../../shared/setting-defs.js';
+import {LIVE_SWAP_MOUSE_BUTTONS, SAVED_CLIENT_FRAMEWORK, SET_SAVED_GESTURES} from '../../shared/setting-defs.js';
 import {COMMAND_EXECUTE_SCRIPT, COMMAND_UPDATE_SETTINGS} from '../constants/commands.js';
 import {DRIVERS} from '../constants/common.js';
+import {LIVE_SOURCE_STALE_MS, SCREENSHOT_INTERACTION_MODE} from '../constants/screenshot.js';
 import {APP_MODE, NATIVE_APP, UNKNOWN_ERROR} from '../constants/session-inspector.js';
 import i18n from '../i18next.js';
-import InspectorDriver from '../lib/appium/inspector-driver.js';
+import InspectorDriver, {ELEMENT_GESTURE} from '../lib/appium/inspector-driver.js';
 import {CLIENT_FRAMEWORK_MAP} from '../lib/client-frameworks/map.js';
+import {getMobileGestureCommand, getW3CGestureActions} from '../lib/gestures/platform-gestures.js';
 import {getSetting, setSetting} from '../polyfills.js';
 import {debounce, isEmpty, omit} from '../utils/common.js';
 import {downloadFile, readTextFromUploadedFiles} from '../utils/file-handling.js';
@@ -108,6 +110,7 @@ export const TOGGLE_SHOW_ATTRIBUTES = 'TOGGLE_SHOW_ATTRIBUTES';
 export const SET_REFRESHING_STATE = 'SET_REFRESHING_STATE';
 
 export const SET_AUTO_SESSION_RESTART = 'SET_AUTO_SESSION_RESTART';
+export const SET_SWAP_MOUSE_BUTTONS = 'SET_SWAP_MOUSE_BUTTONS';
 
 const KEEP_ALIVE_PING_INTERVAL = 20 * 1000;
 const NO_NEW_COMMAND_LIMIT = 24 * 60 * 60 * 1000; // Set timeout to 24 hours
@@ -203,6 +206,96 @@ export function tapElement(path) {
       const tapAction = applyClientMethod({methodName: 'elementClick', elementId});
       await tapAction(dispatch, getState);
     }
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Live mode (live mirror + context menus)
+// ---------------------------------------------------------------------------
+
+// Selects the element at the given path and resolves its Appium element ID right away
+// (no debounce), since Live mode menus act on exactly one deliberately chosen element.
+// Returns the element ID, or null if no suggested locator could find it.
+export function selectElementNow(path) {
+  return async (dispatch, getState) => {
+    const strategyMap = prepareElementSelection(path, dispatch, getState);
+    debouncedResolveElementId.cancel();
+    return await resolveElementId(strategyMap, dispatch, getState, path);
+  };
+}
+
+// Runs an element command (elementClick, elementSendKeys, elementClear, ...) on the element at the path.
+export function interactWithElementAtPath(path, methodName, args = []) {
+  return async (dispatch, getState) => {
+    const elementId = await selectElementNow(path)(dispatch, getState);
+    if (!elementId) {
+      return null;
+    }
+    return await applyClientMethod({methodName, elementId, args})(dispatch, getState);
+  };
+}
+
+// Performs a high-level gesture (see ELEMENT_GESTURES) on the element at the path.
+// Prefers the driver's native `mobile:` command on the resolved element (which the recorder can
+// replay by locator), and falls back to W3C pointer actions over the element's bounds otherwise.
+export function performElementGesture({path, bounds, gesture, opts = {}}) {
+  return async (dispatch, getState) => {
+    const {automationName} = getState().inspector.featureCaps;
+    const center = {x: Math.round((bounds.x1 + bounds.x2) / 2), y: Math.round((bounds.y1 + bounds.y2) / 2)};
+    const command = getMobileGestureCommand(automationName, gesture, {...opts, center});
+
+    if (command && !command.usesElement) {
+      return await applyClientMethod({methodName: COMMAND_EXECUTE_SCRIPT, args: [command.script, [command.opts]]})(
+        dispatch,
+        getState,
+      );
+    }
+    if (command) {
+      const elementId = await selectElementNow(path)(dispatch, getState);
+      if (elementId) {
+        return await applyClientMethod({
+          methodName: ELEMENT_GESTURE,
+          elementId,
+          args: [command.script, command.opts],
+        })(dispatch, getState);
+      }
+    }
+    const actions = getW3CGestureActions(gesture, bounds, opts);
+    if (actions) {
+      return await applyClientMethod({methodName: SCREENSHOT_INTERACTION_MODE.GESTURE, args: [actions]})(
+        dispatch,
+        getState,
+      );
+    }
+    return null;
+  };
+}
+
+export function loadLiveModePreferences() {
+  return async (dispatch) => {
+    const swapMouseButtons = await getSetting(LIVE_SWAP_MOUSE_BUTTONS);
+    dispatch({type: SET_SWAP_MOUSE_BUTTONS, swapMouseButtons: !!swapMouseButtons});
+  };
+}
+
+export function setSwapMouseButtons(swapMouseButtons) {
+  return async (dispatch) => {
+    dispatch({type: SET_SWAP_MOUSE_BUTTONS, swapMouseButtons});
+    await setSetting(LIVE_SWAP_MOUSE_BUTTONS, swapMouseButtons);
+  };
+}
+
+// Re-fetches the page source if it may no longer match the live screen, and returns
+// the (possibly updated) source tree and XML, so callers can hit-test against them immediately.
+// The refresh is skipped while another call is running, or if the user turned automatic refresh off.
+export function refreshSourceIfStale(maxAgeMs = LIVE_SOURCE_STALE_MS) {
+  return async (dispatch, getState) => {
+    const {sourceFetchedAt, methodCallInProgress, isSourceRefreshOn} = getState().inspector;
+    if (isSourceRefreshOn && !methodCallInProgress && Date.now() - sourceFetchedAt > maxAgeMs) {
+      await applyClientMethod({methodName: 'getPageSource', skipScreenshot: true})(dispatch, getState);
+    }
+    const {sourceJSON, sourceXML} = getState().inspector;
+    return {sourceJSON, sourceXML};
   };
 }
 
@@ -1025,7 +1118,7 @@ export function showGestureEditor() {
 export function hideGestureEditor() {
   return (dispatch) => {
     dispatch({type: HIDE_GESTURE_EDITOR});
-    dispatch({type: SET_SCREENSHOT_INTERACTION_MODE, screenshotInteractionMode: 'select'});
+    dispatch({type: SET_SCREENSHOT_INTERACTION_MODE, screenshotInteractionMode: SCREENSHOT_INTERACTION_MODE.LIVE});
   };
 }
 

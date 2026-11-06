@@ -1,0 +1,80 @@
+.liveSurface {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  overflow: hidden;
+  text-align: left;
+  cursor: default;
+  user-select: none;
+}
+
+.liveSurface.dragPending {
+  cursor: crosshair;
+}
+
+.hoverRect,
+.selectedRect,
+.dragSourceRect {
+  position: absolute;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.hoverRect {
+  border: 2px solid #1677ff;
+  background-color: rgba(22, 119, 255, 0.12);
+}
+
+.selectedRect {
+  border: 2px dashed rgb(90, 90, 178);
+}
+
+.dragSourceRect {
+  border: 2px solid #fa8c16;
+  background-color: rgba(250, 140, 22, 0.15);
+}
+
+.hoverLabel {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  max-width: calc(100% - 8px);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 11px;
+  font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.banner {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: #fa8c16;
+  color: #fff;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.menuAnchor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detailsModal :global(.ant-modal-body) {
+  max-height: 70vh;
+  overflow-y: auto;
+}

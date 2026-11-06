@@ -1,6 +1,6 @@
 {
-  "productName": "Appium Inspector",
-  "appId": "io.appium.inspector",
+  "productName": "Live Inspector",
+  "appId": "io.liveinspector.app",
   "asar": true,
   "directories": {
     "output": "release"
@@ -33,13 +33,7 @@
     ]
   },
   "win": {
-    "target": ["nsis", "zip"],
-    "azureSignOptions": {
-      "publisherName": "CN=OpenJS Foundation, O=OpenJS Foundation, L=San Francisco, S=California, C=US",
-      "endpoint": "https://eus.codesigning.azure.net/",
-      "codeSigningAccountName": "OpenJS-CodeSigning",
-      "certificateProfileName": "Appium"
-    }
+    "target": ["nsis", "zip"]
   },
   "nsis": {
     "allowToChangeInstallationDirectory": true,
@@ -50,8 +44,8 @@
     "category": "Development",
     "desktop": {
       "entry": {
-        "Name": "Appium Inspector",
-        "Comment": "GUI inspector for apps, powered by Appium",
+        "Name": "Live Inspector",
+        "Comment": "Live device mirror and element inspector, powered by Appium",
         "Categories": "Development",
         "Terminal": false,
         "Type": "Application"
@@ -60,10 +54,5 @@
   },
   "toolsets": {
     "appimage": "1.0.3"
-  },
-  "publish": {
-    "provider": "github",
-    "owner": "appium",
-    "vPrefixedTagName": true
   }
 }

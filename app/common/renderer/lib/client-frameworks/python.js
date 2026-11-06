@@ -91,6 +91,16 @@ driver.quit()`;
     return `${this.getVarName(varName, varIndex)}.send_keys(${JSON.stringify(text)})`;
   }
 
+  // `mobile:` gesture on a found element (Live mode Interact menu)
+  codeFor_elementGesture(varName, varIndex, scriptCmd, opts = {}) {
+    const el = this.getVarName(varName, varIndex);
+    const entries = Object.entries(opts)
+      .filter(([k, v]) => v !== undefined && k !== 'elementId')
+      .map(([k, v]) => `${JSON.stringify(k)}: ${this.getPythonVal(v)}`);
+    entries.push(`"elementId": ${el}.id`);
+    return `driver.execute_script(${this.quote(scriptCmd)}, {${entries.join(', ')}})`;
+  }
+
   codeFor_tap(varNameIgnore, varIndexIgnore, pointerActions) {
     const {x, y} = this.getTapCoordinatesFromPointerActions(pointerActions);
     return `actions = ActionChains(driver)
